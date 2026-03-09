@@ -7,6 +7,7 @@ from agent.repo_agent import handle_repo
 
 from terminal.executor import run_command
 from safety.command_filter import is_safe
+from utils.command_parser import parse_commands
 
 
 print("\n🚀 Agentic Dev CLI\n")
@@ -35,11 +36,13 @@ while True:
         print("\n👋 Exiting Agent")
         break
 
-    # GitHub repo setup
+    # GitHub repo handling
     if "github.com" in prompt:
+
         commands = handle_repo(prompt, os_type)
 
     else:
+
         plan = create_plan(prompt)
         commands = generate_commands(plan, os_type)
 
@@ -51,7 +54,9 @@ while True:
     if confirm.lower() != "yes":
         continue
 
-    for cmd in commands.split("\n"):
+    command_list = parse_commands(commands)
+
+    for cmd in command_list:
 
         cmd = cmd.strip()
 
@@ -63,16 +68,28 @@ while True:
 
             new_dir = cmd.replace("cd ", "").strip()
 
-            if os.path.isabs(new_dir):
-                current_dir = new_dir
-            else:
-                current_dir = os.path.join(current_dir, new_dir)
+            # Prevent double cd
+            if os.path.basename(current_dir) == new_dir:
 
-            print("📂 Changed directory to:", current_dir)
+                print("📂 Already inside:", current_dir)
+                continue
+
+            new_path = os.path.join(current_dir, new_dir)
+
+            if os.path.exists(new_path):
+
+                current_dir = new_path
+                print("📂 Changed directory to:", current_dir)
+
+            else:
+
+                print("⚠ Directory not found:", new_path)
+
             continue
 
         # Safety check
         if not is_safe(cmd):
+
             print("❌ Blocked unsafe command:", cmd)
             continue
 
